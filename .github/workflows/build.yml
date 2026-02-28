@@ -27,10 +27,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Configure Flutter mirror
+      - name: Configure Flutter
         run: |
           flutter config --no-analytics
-          flutter config set mirror https://storage.flutter-io.cn
 
       - name: Get dependencies
         run: flutter pub get
