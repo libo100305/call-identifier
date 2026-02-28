@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 自动推送工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .animate-spin-slow { animation: spin 2s linear infinite; }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        }
+        
+        .step-active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .step-completed {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+        
+        .step-pending {
+            background: #f3f4f6;
+            color: #9ca3af;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        
+        .log-entry { animation: slideIn 0.3s ease-out; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 4px; }
+        
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen gradient-bg p-4 md:p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="text-center mb-8 animate-slide-in">
+            <div class="inline-flex items-center gap-3 bg-white/20 backdrop-blur-lg rounded-full px-6 py-3 mb-4">
+                <span class="text-3xl">🚀</span>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">GitHub 自动推送工具</h1>
+            </div>
+            <p class="text-white/80 text-lg">一键推送代码，自动构建 APK</p>
+        </header>
+
+        <div class="grid lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2 space-y-6">
+                <div class="glass-card rounded-3xl p-6 md:p-8 animate-slide-in">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl">⚡</div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">快速推送</h2>
+                            <p class="text-gray-500 text-sm">提交更改并推送到 GitHub</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">提交说明</label>
+                        <input type="text" id="commitMessage" placeholder="例如：修复登录页面样式、添加新功能..." class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none" value="更新应用代码">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <button onclick="pushCode()" id="pushBtn" class="btn-primary text-white font-semibold py-4 px-6 rounded-xl flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                            推送代码
+                        </button>
+                        <button onclick="showReleaseInput()" id="tagBtn" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold py-4 px-6 rounded-xl flex items-center justify-center gap-2 hover:shadow-lg transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/></svg>
+                            发布版本
+                        </button>
+                    </div>
+
+                    <div id="tagInputSection" class="hidden mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">版本号（例如：v1.0.0）</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="tagVersion" placeholder="v1.0.0" class="flex-1 px-4 py-3 rounded-xl border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all outline-none">
+                            <button onclick="confirmRelease()" class="bg-green-500 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-600 transition-colors">确认发布</button>
+                            <button onclick="hideReleaseInput()" class="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-medium hover:bg-gray-300 transition-colors">取消</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-4 gap-2 mt-6">
+                        <div id="step1" class="step-pending rounded-xl p-3 text-center text-xs font-medium transition-all">
+                            <div class="text-lg mb-1">📝</div>
+                            添加更改
+                        </div>
+                        <div id="step2" class="step-pending rounded-xl p-3 text-center text-xs font-medium transition-all">
+                            <div class="text-lg mb-1">💾</div>
+                            提交代码
+                        </div>
+                        <div id="step3" class="step-pending rounded-xl p-3 text-center text-xs font-medium transition-all">
+                            <div class="text-lg mb-1">🚀</div>
+                            推送GitHub
+                        </div>
+                        <div id="step4" class="step-pending rounded-xl p-3 text-center text-xs font-medium transition-all">
+                            <div class="text-lg mb-1">⚙️</div>
+                            构建APK
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 animate-slide-in">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-white">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-800">执行日志</h3>
+                                <p class="text-gray-500 text-sm">实时显示操作进度</p>
+                            </div>
+                        </div>
+                        <button onclick="clearLogs()" class="text-gray-400 hover:text-gray-600 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                    </div>
+                    <div id="logContainer" class="bg-gray-900 rounded-xl p-4 h-64 overflow-y-auto font-mono text-sm">
+                        <div class="text-gray-500 italic">等待操作...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                <div class="glass-card rounded-3xl p-6 animate-slide-in">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white">📁</div>
+                        <h3 class="font-bold text-gray-800">项目信息</h3>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span class="text-gray-500">项目名称</span>
+                            <span id="projectName" class="font-medium text-gray-800">加载中...</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span class="text-gray-500">当前分支</span>
+                            <span id="currentBranch" class="font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded">加载中...</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                            <span class="text-gray-500">GitHub仓库</span>
+                            <span id="repoStatus" class="font-medium text-gray-800">加载中...</span>
+                        </div>
+                        <div class="flex justify-between items-center py-2">
+                            <span class="text-gray-500">未提交更改</span>
+                            <span id="uncommittedChanges" class="font-medium">加载中...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 animate-slide-in">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-400 to-cyan-500 flex items-center justify-center text-white">🏗️</div>
+                        <h3 class="font-bold text-gray-800">构建状态</h3>
+                    </div>
+                    <div id="buildStatus" class="text-center py-4">
+                        <div class="text-5xl mb-2">⏳</div>
+                        <p class="text-gray-500">等待推送</p>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 animate-slide-in">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-teal-500 flex items-center justify-center text-white">🔗</div>
+                        <h3 class="font-bold text-gray-800">快速链接</h3>
+                    </div>
+                    <div class="space-y-2">
+                        <a id="githubActionsLink" href="#" target="_blank" class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-purple-50 transition-colors group">
+                            <span class="text-2xl">⚙️</span>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-800 group-hover:text-purple-600">Actions 构建页面</p>
+                                <p class="text-xs text-gray-500">查看构建进度和下载APK</p>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                        <a id="githubReleasesLink" href="#" target="_blank" class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-purple-50 transition-colors group">
+                            <span class="text-2xl">📦</span>
+                            <div class="flex-1">
+                                <p class="font-medium text-gray-800 group-hover:text-purple-600">Releases 发布页面</p>
+                                <p class="text-xs text-gray-500">下载正式版本APK</p>
+                            </div>
+                            <svg class="w-5 h-5 text-gray-400 group-hover:text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8765';
+        let isProcessing = false;
+        let repoUrl = '';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProjectInfo();
+        });
+
+        async function loadProjectInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/info`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const data = result.data;
+                    document.getElementById('projectName').textContent = data.projectName;
+                    document.getElementById('currentBranch').textContent = data.branch;
+                    
+                    if (data.hasRemote) {
+                        document.getElementById('repoStatus').innerHTML = '<span class="text-green-500">✓ 已配置</span>';
+                        repoUrl = data.repoUrl;
+                        document.getElementById('githubActionsLink').href = `${repoUrl}/actions`;
+                        document.getElementById('githubReleasesLink').href = `${repoUrl}/releases`;
+                    } else {
+                        document.getElementById('repoStatus').innerHTML = '<span class="text-red-500">✗ 未配置</span>';
+                    }
+                    
+                    if (data.changeCount > 0) {
+                        document.getElementById('uncommittedChanges').innerHTML = `<span class="text-orange-500 font-bold">${data.changeCount} 个文件</span>`;
+                    } else {
+                        document.getElementById('uncommittedChanges').innerHTML = '<span class="text-green-500">✓ 无未提交更改</span>';
+                    }
+                }
+            } catch (error) {
+                log('无法连接到服务器，请确保服务器已启动', 'error');
+            }
+        }
+
+        async function pushCode() {
+            if (isProcessing) return;
+            
+            const commitMsg = document.getElementById('commitMessage').value.trim();
+            if (!commitMsg) {
+                alert('请输入提交说明！');
+                return;
+            }
+
+            isProcessing = true;
+            updateButtons(true);
+            clearLogs();
+            resetSteps();
+
+            try {
+                log('开始推送代码...', 'info');
+                
+                const response = await fetch(`${API_BASE}/api/push`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: commitMsg })
+                });
+                
+                const result = await response.json();
+                
+                if (result.logs) {
+                    result.logs.forEach(logItem => {
+                        log(logItem.message, logItem.type);
+                        if (logItem.step) {
+                            updateStep(logItem.step, logItem.type === 'success' ? 'completed' : (logItem.type === 'error' ? 'error' : 'active'));
+                        }
+                    });
+                }
+                
+                if (result.success) {
+                    log('✅ 推送成功！GitHub Actions 正在构建 APK...', 'success');
+                    log('📱 构建完成后，请点击右侧 "Actions 构建页面" 下载 APK', 'info');
+                    updateBuildStatus('success');
+                    if (result.repoUrl) {
+                        repoUrl = result.repoUrl;
+                        document.getElementById('githubActionsLink').href = `${repoUrl}/actions`;
+                        document.getElementById('githubReleasesLink').href = `${repoUrl}/releases`;
+                    }
+                } else {
+                    log('❌ 推送失败', 'error');
+                    updateBuildStatus('error');
+                }
+            } catch (error) {
+                log('❌ 连接服务器失败: ' + error.message, 'error');
+                updateBuildStatus('error');
+            } finally {
+                isProcessing = false;
+                updateButtons(false);
+                loadProjectInfo();
+            }
+        }
+
+        function showReleaseInput() {
+            document.getElementById('tagInputSection').classList.remove('hidden');
+            document.getElementById('tagVersion').focus();
+        }
+
+        function hideReleaseInput() {
+            document.getElementById('tagInputSection').classList.add('hidden');
+        }
+
+        async function confirmRelease() {
+            const version = document.getElementById('tagVersion').value.trim();
+            if (!version) {
+                alert('请输入版本号！');
+                return;
+            }
+            
+            if (!version.match(/^v?\d+\.\d+\.\d+$/)) {
+                alert('版本号格式不正确！请使用格式如：v1.0.0 或 1.0.0');
+                return;
+            }
+
+            hideReleaseInput();
+            
+            const commitMsg = document.getElementById('commitMessage').value.trim() || `发布版本 ${version}`;
+            
+            isProcessing = true;
+            updateButtons(true);
+            clearLogs();
+            resetSteps();
+
+            try {
+                log(`开始发布版本 ${version}...`, 'info');
+                
+                const response = await fetch(`${API_BASE}/api/release`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ version: version, message: commitMsg })
+                });
+                
+                const result = await response.json();
+                
+                if (result.logs) {
+                    result.logs.forEach(logItem => {
+                        log(logItem.message, logItem.type);
+                    });
+                }
+                
+                if (result.success) {
+                    log(`✅ 版本 ${result.version} 发布成功！`, 'success');
+                    log('📦 正式版 APK 将自动上传到 Releases 页面', 'success');
+                    updateBuildStatus('success');
+                    if (result.repoUrl) {
+                        repoUrl = result.repoUrl;
+                        document.getElementById('githubActionsLink').href = `${repoUrl}/actions`;
+                        document.getElementById('githubReleasesLink').href = `${repoUrl}/releases`;
+                    }
+                } else {
+                    log('❌ 发布失败', 'error');
+                    updateBuildStatus('error');
+                }
+            } catch (error) {
+                log('❌ 连接服务器失败: ' + error.message, 'error');
+                updateBuildStatus('error');
+            } finally {
+                isProcessing = false;
+                updateButtons(false);
+                loadProjectInfo();
+            }
+        }
+
+        function updateStep(stepNum, status) {
+            const stepEl = document.getElementById(`step${stepNum}`);
+            stepEl.classList.remove('step-active', 'step-completed', 'step-pending');
+            if (status === 'active') stepEl.classList.add('step-active');
+            else if (status === 'completed') stepEl.classList.add('step-completed');
+            else if (status === 'error') stepEl.classList.add('step-active');
+            else stepEl.classList.add('step-pending');
+        }
+
+        function resetSteps() {
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById(`step${i}`);
+                stepEl.classList.remove('step-active', 'step-completed');
+                stepEl.classList.add('step-pending');
+            }
+        }
+
+        function updateButtons(processing) {
+            const pushBtn = document.getElementById('pushBtn');
+            const tagBtn = document.getElementById('tagBtn');
+            
+            if (processing) {
+                pushBtn.disabled = true;
+                pushBtn.innerHTML = '<svg class="animate-spin-slow w-5 h-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 处理中...';
+                tagBtn.disabled = true;
+            } else {
+                pushBtn.disabled = false;
+                pushBtn.innerHTML = '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg> 推送代码';
+                tagBtn.disabled = false;
+            }
+        }
+
+        function updateBuildStatus(status) {
+            const statusEl = document.getElementById('buildStatus');
+            switch (status) {
+                case 'success':
+                    statusEl.innerHTML = '<div class="text-5xl mb-2">✅</div><p class="text-green-500 font-medium">构建成功！</p>';
+                    break;
+                case 'error':
+                    statusEl.innerHTML = '<div class="text-5xl mb-2">❌</div><p class="text-red-500 font-medium">构建失败</p>';
+                    break;
+                default:
+                    statusEl.innerHTML = '<div class="text-5xl mb-2">⏳</div><p class="text-gray-500">等待推送</p>';
+            }
+        }
+
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry mb-1';
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let colorClass = 'text-gray-300';
+            if (type === 'error') colorClass = 'text-red-400';
+            else if (type === 'success') colorClass = 'text-green-400';
+            else if (type === 'warning') colorClass = 'text-yellow-400';
+            else if (type === 'info') colorClass = 'text-blue-400';
+            
+            entry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> <span class="${colorClass}">${message}</span>`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '<div class="text-gray-500 italic">准备就绪...</div>';
+        }
+    </script>
+</body>
+</html>
