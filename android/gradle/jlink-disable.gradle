@@ -1,0 +1,21 @@
+// 禁用 jlink transform 的 Gradle 配置
+// 将此文件保存为 android/gradle/jlink-disable.gradle
+
+gradle.allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        options.fork = true
+        options.forkOptions.jvmArgs = [
+            '-Dorg.gradle.internal.native.jni.disabled=true',
+            '-Dandroid.enableJLink=false',
+            '-Dandroid.disableJLinkTransform=true'
+        ]
+    }
+    
+    afterEvaluate {
+        tasks.withType(JavaCompile).configureEach {
+            doFirst {
+                println "Disabling jlink for JavaCompile task: ${name}"
+            }
+        }
+    }
+}

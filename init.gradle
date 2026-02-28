@@ -1,0 +1,10 @@
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile).configureEach {
+        options.fork = true
+        options.forkOptions.jvmArgs = [
+            '-Dorg.gradle.internal.native.jni.disabled=true',
+            '-Dandroid.enableJLink=false',
+            '-Dandroid.disableJLinkTransform=true'
+        ]
+    }
+}

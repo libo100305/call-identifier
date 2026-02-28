@@ -1,0 +1,20 @@
+// 初始化脚本：禁用 jlink
+allprojects {
+    tasks.withType(JavaCompile).configureEach {
+        options.fork = true
+        options.forkOptions.jvmArgs = [
+            '-Dorg.gradle.internal.native.jni.disabled=true',
+            '-Dandroid.enableJLink=false',
+            '-Dandroid.disableJLinkTransform=true'
+        ]
+    }
+    
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile).configureEach {
+            doFirst {
+                println "JavaCompile task: ${name}"
+                println "JVM Args: ${options.forkOptions.jvmArgs}"
+            }
+        }
+    }
+}
