@@ -10,11 +10,11 @@
 class BaiduOcrConfig {
   /// 百度 API Key
   /// 在 https://ai.baidu.com/ 创建应用后获取
-  static const String apiKey = 'YOUR_API_KEY_HERE';
+  static const String apiKey = 'Y6XXJcrpRfrLOxdpkfW5p4VB';
   
   /// 百度 Secret Key
   /// 在 https://ai.baidu.com/ 创建应用后获取
-  static const String secretKey = 'YOUR_SECRET_KEY_HERE';
+  static const String secretKey = 'L1hYbwTNckhq5BJy6fFiHg7AqP71kxAS';
   
   /// 名片识别 API 地址
   static const String ocrUrl = 'https://aip.baidubce.com/rest/2.0/ocr/v1/business_card';
