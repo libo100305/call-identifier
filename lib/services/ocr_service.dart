@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../models/contact.dart';
+import '../config/baidu_ocr_config.dart';
 
 /// OCR 识别服务结果类
 /// 封装 OCR 识别的返回结果
@@ -38,11 +39,6 @@ class OcrResult {
 /// 1. 百度 OCR API（推荐，国内稳定）
 /// 2. 本地模拟识别（离线演示）
 class OcrService {
-  // 百度 OCR API 配置（需要申请）
-  // 申请地址：https://ai.baidu.com/tech/ocr
-  static const String _baiduApiKey = 'YOUR_API_KEY';
-  static const String _baiduSecretKey = 'YOUR_SECRET_KEY';
-  static const String _baiduOcrUrl = 'https://aip.baidubce.com/rest/2.0/ocr/v1/business_card';
 
   /// 从图像文件识别文本
   /// 
@@ -77,10 +73,10 @@ class OcrService {
   Future<OcrResult> _recognizeWithBaiduOcr(String imagePath) async {
     try {
       // 检查 API Key 是否配置
-      if (_baiduApiKey == 'YOUR_API_KEY') {
+      if (!BaiduOcrConfig.isConfigured) {
         return OcrResult(
           success: false,
-          errorMessage: '请先配置百度 OCR API Key',
+          errorMessage: '请先配置百度 OCR API Key\n\n配置步骤：\n1. 访问 https://ai.baidu.com/tech/ocr\n2. 创建应用获取 API Key 和 Secret Key\n3. 在 lib/config/baidu_ocr_config.dart 中填入密钥',
         );
       }
 
@@ -89,10 +85,10 @@ class OcrService {
       final base64Image = base64Encode(bytes);
 
       // 获取 Access Token
-      final tokenUrl = 'https://aip.baidubce.com/oauth/2.0/token'
+      final tokenUrl = '${BaiduOcrConfig.tokenUrl}'
           '?grant_type=client_credentials'
-          '&client_id=$_baiduApiKey'
-          '&client_secret=$_baiduSecretKey';
+          '&client_id=${BaiduOcrConfig.apiKey}'
+          '&client_secret=${BaiduOcrConfig.secretKey}';
 
       final tokenResponse = await http.post(Uri.parse(tokenUrl));
       if (tokenResponse.statusCode != 200) {
@@ -106,7 +102,7 @@ class OcrService {
       final accessToken = tokenData['access_token'];
 
       // 调用名片识别 API
-      final ocrUrl = '$_baiduOcrUrl?access_token=$accessToken';
+      final ocrUrl = '${BaiduOcrConfig.ocrUrl}?access_token=$accessToken';
       final ocrResponse = await http.post(
         Uri.parse(ocrUrl),
         headers: {
